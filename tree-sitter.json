@@ -6,7 +6,7 @@
       "camelcase": "Candid",
       "title": "Candid",
       "scope": "source.candid",
-      "file-types": ["did"],
+      "file-types": ["candid", "did"],
       "injection-regex": "^candid$",
       "class-name": "TreeSitterCandid"
     }

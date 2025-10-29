@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Candid grammar for tree-sitter",
   "repository": "https://github.com/perforate-org/tree-sitter-candid",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "author": {
     "name": "Yota Inomoto",
     "email": "yota@perforate.org"
