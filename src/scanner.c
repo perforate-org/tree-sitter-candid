@@ -48,12 +48,16 @@ static inline void skip_leading_whitespace(TSLexer *lexer) {
   }
 }
 
-static bool skip_block_comment_start(TSLexer *lexer) {
-  skip_leading_whitespace(lexer);
-  if (lexer->lookahead != '/') return false;
-  if (advance_and_peek(lexer, false) != '*') return false;
+static inline bool consume_sequence(TSLexer *lexer, int first, int second) {
+  if (lexer->lookahead != first) return false;
+  if (advance_and_peek(lexer, false) != second) return false;
   advance_and_peek(lexer, false);
   return true;
+}
+
+static bool skip_block_comment_start(TSLexer *lexer) {
+  skip_leading_whitespace(lexer);
+  return consume_sequence(lexer, '/', '*');
 }
 
 static bool consume_block_comment_body(Scanner *scanner, TSLexer *lexer) {
@@ -65,29 +69,21 @@ static bool consume_block_comment_body(Scanner *scanner, TSLexer *lexer) {
       return false;
     }
 
-    switch (lexer->lookahead) {
-      case '/':
-        if (advance_and_peek(lexer, false) == '*') {
-          advance_and_peek(lexer, false);
-          scanner->depth++;
-        }
-        break;
-      case '*':
-        if (advance_and_peek(lexer, false) == '/') {
-          advance_and_peek(lexer, false);
-          if (--scanner->depth == 0) {
-            lexer->mark_end(lexer);
-            return true;
-          }
-        }
-        break;
-      case '\n':
-        advance_and_peek(lexer, true);
-        break;
-      default:
-        advance_and_peek(lexer, false);
-        break;
+    if (consume_sequence(lexer, '/', '*')) {
+      scanner->depth++;
+      continue;
     }
+
+    if (consume_sequence(lexer, '*', '/')) {
+      if (--scanner->depth == 0) {
+        lexer->mark_end(lexer);
+        return true;
+      }
+      continue;
+    }
+
+    bool skip = lexer->lookahead == '\n';
+    advance_and_peek(lexer, skip);
   }
 }
 
