@@ -82,8 +82,7 @@ static bool consume_block_comment_body(Scanner *scanner, TSLexer *lexer) {
       continue;
     }
 
-    bool skip = lexer->lookahead == '\n';
-    advance_and_peek(lexer, skip);
+    advance_and_peek(lexer, false);
   }
 }
 
