@@ -1,0 +1,37 @@
+{
+  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
+  "grammars": [
+    {
+      "name": "candid",
+      "camelcase": "Candid",
+      "title": "Candid",
+      "scope": "source.candid",
+      "file-types": ["did"],
+      "injection-regex": "^candid$",
+      "class-name": "TreeSitterCandid"
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "license": "Apache-2.0",
+    "description": "Candid grammar for tree-sitter",
+    "authors": [
+      {
+        "name": "Yota Inomoto",
+        "email": "yota@perforate.org"
+      }
+    ],
+    "links": {
+      "repository": "https://github.com/perforate-org/tree-sitter-candid"
+    }
+  },
+  "bindings": {
+    "c": true,
+    "go": true,
+    "node": true,
+    "python": true,
+    "rust": true,
+    "swift": true,
+    "zig": false
+  }
+}
