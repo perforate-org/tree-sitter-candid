@@ -73,7 +73,7 @@ static void skip_nested_line_comment(TSLexer *lexer) {
         int32_t newline = lexer->lookahead;
         lexer->advance(lexer, false);
         if (newline == '\r' && lexer->lookahead == '\n') {
-        lexer->advance(lexer, false);
+            lexer->advance(lexer, false);
         }
     }
 }
@@ -94,42 +94,42 @@ static bool consume_block_comment_body(Scanner *scanner, TSLexer *lexer) {
 
     for (;;) {
         if (lexer->eof(lexer)) {
-        lexer->mark_end(lexer);
-        return false;
+            lexer->mark_end(lexer);
+            return false;
         }
 
         int32_t lookahead = lexer->lookahead;
 
         if (lookahead == '/') {
-        lexer->advance(lexer, false);
-
-        if (lexer->lookahead == '*') {
             lexer->advance(lexer, false);
-            scanner->depth++;
-            continue;
-        }
 
-        if (lexer->lookahead == '/') {
-            skip_nested_line_comment(lexer);
-            continue;
-        }
+            if (lexer->lookahead == '*') {
+                lexer->advance(lexer, false);
+                scanner->depth++;
+                continue;
+            }
 
-        continue;
+            if (lexer->lookahead == '/') {
+                skip_nested_line_comment(lexer);
+                continue;
+            }
+
+            continue;
         }
 
         if (lookahead == '*') {
-        lexer->advance(lexer, false);
-
-        if (lexer->lookahead == '/') {
             lexer->advance(lexer, false);
-            if (--scanner->depth == 0) {
-            lexer->mark_end(lexer);
-            return true;
-            }
-            continue;
-        }
 
-        continue;
+            if (lexer->lookahead == '/') {
+                lexer->advance(lexer, false);
+                if (--scanner->depth == 0) {
+                    lexer->mark_end(lexer);
+                    return true;
+                }
+                continue;
+            }
+
+            continue;
         }
 
         lexer->advance(lexer, false);
