@@ -1,6 +1,8 @@
 #include "tree_sitter/alloc.h"
 #include "tree_sitter/parser.h"
 
+#include <stdint.h>
+#include <string.h>
 #include <wctype.h>
 
 enum TokenType {
@@ -23,8 +25,8 @@ unsigned tree_sitter_candid_external_scanner_serialize(void *payload, char *buff
   Scanner *scanner = (Scanner *)payload;
   if (!scanner) return 0;
 
-  buffer[0] = (char)scanner->depth;
-  return 1;
+  memcpy(buffer, &scanner->depth, sizeof(scanner->depth));
+  return sizeof(scanner->depth);
 }
 
 void tree_sitter_candid_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
@@ -32,32 +34,52 @@ void tree_sitter_candid_external_scanner_deserialize(void *payload, const char *
   if (!scanner) return;
 
   scanner->depth = 0;
-  if (length == 1) {
-    scanner->depth = buffer[0];
+  if (length == sizeof(scanner->depth)) {
+    memcpy(&scanner->depth, buffer, sizeof(scanner->depth));
   }
-}
-
-static inline int advance_and_peek(TSLexer *lexer, bool skip) {
-  lexer->advance(lexer, skip);
-  return lexer->lookahead;
 }
 
 static inline void skip_leading_whitespace(TSLexer *lexer) {
-  while (iswspace(lexer->lookahead)) {
-    advance_and_peek(lexer, true);
+  while (!lexer->eof(lexer) && iswspace(lexer->lookahead)) {
+    lexer->advance(lexer, true);
   }
 }
 
-static inline bool consume_sequence(TSLexer *lexer, int first, int second) {
-  if (lexer->lookahead != first) return false;
-  if (advance_and_peek(lexer, false) != second) return false;
-  advance_and_peek(lexer, false);
+static inline bool consume_char(TSLexer *lexer, int32_t expected) {
+  if (lexer->lookahead != expected) return false;
+  lexer->advance(lexer, false);
   return true;
+}
+
+static inline bool is_line_break(int32_t character) {
+  return character == '\n' || character == '\r';
+}
+
+static void skip_nested_line_comment(TSLexer *lexer) {
+  if (lexer->lookahead != '/') return;
+
+  lexer->advance(lexer, false);
+
+  while (!lexer->eof(lexer) && !is_line_break(lexer->lookahead)) {
+    lexer->advance(lexer, false);
+  }
+
+  if (!lexer->eof(lexer)) {
+    int32_t newline = lexer->lookahead;
+    lexer->advance(lexer, false);
+    if (newline == '\r' && lexer->lookahead == '\n') {
+      lexer->advance(lexer, false);
+    }
+  }
 }
 
 static bool skip_block_comment_start(TSLexer *lexer) {
   skip_leading_whitespace(lexer);
-  return consume_sequence(lexer, '/', '*');
+
+  if (!consume_char(lexer, '/')) return false;
+  if (!consume_char(lexer, '*')) return false;
+
+  return true;
 }
 
 static bool consume_block_comment_body(Scanner *scanner, TSLexer *lexer) {
@@ -69,20 +91,41 @@ static bool consume_block_comment_body(Scanner *scanner, TSLexer *lexer) {
       return false;
     }
 
-    if (consume_sequence(lexer, '/', '*')) {
-      scanner->depth++;
-      continue;
-    }
+    int32_t lookahead = lexer->lookahead;
 
-    if (consume_sequence(lexer, '*', '/')) {
-      if (--scanner->depth == 0) {
-        lexer->mark_end(lexer);
-        return true;
+    if (lookahead == '/') {
+      lexer->advance(lexer, false);
+
+      if (lexer->lookahead == '*') {
+        lexer->advance(lexer, false);
+        scanner->depth++;
+        continue;
       }
+
+      if (lexer->lookahead == '/') {
+        skip_nested_line_comment(lexer);
+        continue;
+      }
+
       continue;
     }
 
-    advance_and_peek(lexer, false);
+    if (lookahead == '*') {
+      lexer->advance(lexer, false);
+
+      if (lexer->lookahead == '/') {
+        lexer->advance(lexer, false);
+        if (--scanner->depth == 0) {
+          lexer->mark_end(lexer);
+          return true;
+        }
+        continue;
+      }
+
+      continue;
+    }
+
+    lexer->advance(lexer, false);
   }
 }
 
