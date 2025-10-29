@@ -20,18 +20,21 @@ void tree_sitter_candid_external_scanner_destroy(void *payload) {
 }
 
 unsigned tree_sitter_candid_external_scanner_serialize(void *payload, char *buffer) {
-    Scanner *scanner = (Scanner *)payload;
-    buffer[0] = (char)scanner->depth;
+  Scanner *scanner = (Scanner *)payload;
+  if (!scanner) return 0;
+
+  buffer[0] = (char)scanner->depth;
   return 1;
 }
 
 void tree_sitter_candid_external_scanner_deserialize(void *payload, const char *buffer, unsigned length) {
-    Scanner *scanner = (Scanner *)payload;
-    scanner->depth = 0;
-    if (length == 1) {
-        Scanner *scanner = (Scanner *)payload;
-        scanner->depth = buffer[0];
-    }
+  Scanner *scanner = (Scanner *)payload;
+  if (!scanner) return;
+
+  scanner->depth = 0;
+  if (length == 1) {
+    scanner->depth = buffer[0];
+  }
 }
 
 static inline int advance_and_peek(TSLexer *lexer, bool skip) {
@@ -39,7 +42,14 @@ static inline int advance_and_peek(TSLexer *lexer, bool skip) {
   return lexer->lookahead;
 }
 
+static inline void skip_leading_whitespace(TSLexer *lexer) {
+  while (iswspace(lexer->lookahead)) {
+    advance_and_peek(lexer, true);
+  }
+}
+
 static bool skip_block_comment_start(TSLexer *lexer) {
+  skip_leading_whitespace(lexer);
   if (lexer->lookahead != '/') return false;
   if (advance_and_peek(lexer, false) != '*') return false;
   advance_and_peek(lexer, false);
@@ -55,29 +65,29 @@ static bool consume_block_comment_body(Scanner *scanner, TSLexer *lexer) {
       return false;
     }
 
-    if (lexer->lookahead == '/') {
-      if (advance_and_peek(lexer, false) == '*') {
-        advance_and_peek(lexer, false);
-        scanner->depth++;
-        continue;
-      }
-      continue;
-    }
-
-    if (lexer->lookahead == '*') {
-      if (advance_and_peek(lexer, false) == '/') {
-        advance_and_peek(lexer, false);
-        if (--scanner->depth == 0) {
-          lexer->mark_end(lexer);
-          return true;
+    switch (lexer->lookahead) {
+      case '/':
+        if (advance_and_peek(lexer, false) == '*') {
+          advance_and_peek(lexer, false);
+          scanner->depth++;
         }
-        continue;
-      }
-      continue;
+        break;
+      case '*':
+        if (advance_and_peek(lexer, false) == '/') {
+          advance_and_peek(lexer, false);
+          if (--scanner->depth == 0) {
+            lexer->mark_end(lexer);
+            return true;
+          }
+        }
+        break;
+      case '\n':
+        advance_and_peek(lexer, true);
+        break;
+      default:
+        advance_and_peek(lexer, false);
+        break;
     }
-
-    bool is_newline = lexer->lookahead == '\n';
-    advance_and_peek(lexer, is_newline);
   }
 }
 
