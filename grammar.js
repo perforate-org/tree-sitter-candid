@@ -162,7 +162,9 @@ module.exports = grammar({
     val: ($) => choice($.primval, $.consval, $.refval, seq("(", $.annval, ")")),
     annval: ($) => choice($.val, seq($.val, ":", $.datatype)),
     primval: ($) =>
-      choice($.nat, $.int, $.float, $.text, "true", "false", "null"),
+      choice($.nat, $.int, $.float, $.text, $.bool_literal, $.null_literal),
+    bool_literal: (_) => choice("true", "false"),
+    null_literal: (_) => "null",
     consval: ($) =>
       choice(
         seq("opt", $.val),

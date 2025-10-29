@@ -1056,18 +1056,31 @@
           "name": "text"
         },
         {
+          "type": "SYMBOL",
+          "name": "bool_literal"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "null_literal"
+        }
+      ]
+    },
+    "bool_literal": {
+      "type": "CHOICE",
+      "members": [
+        {
           "type": "STRING",
           "value": "true"
         },
         {
           "type": "STRING",
           "value": "false"
-        },
-        {
-          "type": "STRING",
-          "value": "null"
         }
       ]
+    },
+    "null_literal": {
+      "type": "STRING",
+      "value": "null"
     },
     "consval": {
       "type": "CHOICE",
