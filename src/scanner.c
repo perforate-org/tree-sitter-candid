@@ -34,27 +34,32 @@ void tree_sitter_candid_external_scanner_deserialize(void *payload, const char *
   if (!scanner) return;
 
   scanner->depth = 0;
+  // Restore tracked nesting depth when the serialized size matches.
   if (length == sizeof(scanner->depth)) {
     memcpy(&scanner->depth, buffer, sizeof(scanner->depth));
   }
 }
 
+// Consume leading whitespace so comment detection always starts on syntax.
 static inline void skip_leading_whitespace(TSLexer *lexer) {
   while (!lexer->eof(lexer) && iswspace(lexer->lookahead)) {
     lexer->advance(lexer, true);
   }
 }
 
+// Advance past a specific character if it matches the current lookahead.
 static inline bool consume_char(TSLexer *lexer, int32_t expected) {
   if (lexer->lookahead != expected) return false;
   lexer->advance(lexer, false);
   return true;
 }
 
+// Detect CR or LF without relying on locale-specific checks.
 static inline bool is_line_break(int32_t character) {
   return character == '\n' || character == '\r';
 }
 
+// Skip a nested line comment inside a block comment, preserving newlines.
 static void skip_nested_line_comment(TSLexer *lexer) {
   if (lexer->lookahead != '/') return;
 
@@ -73,6 +78,7 @@ static void skip_nested_line_comment(TSLexer *lexer) {
   }
 }
 
+// Consume the `/ *` prefix once leading whitespace is removed.
 static bool skip_block_comment_start(TSLexer *lexer) {
   skip_leading_whitespace(lexer);
 
@@ -82,6 +88,7 @@ static bool skip_block_comment_start(TSLexer *lexer) {
   return true;
 }
 
+// Walk the body of the block comment while tracking nested depth.
 static bool consume_block_comment_body(Scanner *scanner, TSLexer *lexer) {
   scanner->depth = 1;
 
