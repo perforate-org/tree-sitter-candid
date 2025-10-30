@@ -162,7 +162,14 @@ module.exports = grammar({
     val: ($) => choice($.primval, $.consval, $.refval, seq("(", $.annval, ")")),
     annval: ($) => choice($.val, seq($.val, ":", $.datatype)),
     primval: ($) =>
-      choice($.nat, $.int, $.float, $.text, $.bool_literal, $.null_literal),
+      choice(
+        $.nat,
+        $.int_literal,
+        $.float,
+        $.text,
+        $.bool_literal,
+        $.null_literal,
+      ),
     bool_literal: (_) => choice("true", "false"),
     null_literal: (_) => "null",
     consval: ($) =>
@@ -206,7 +213,7 @@ module.exports = grammar({
     id: (_) => /[A-Za-z_][A-Za-z0-9_]*/,
 
     nat: (_) => choice(NUM, token(seq("0x", HEX_NUM))),
-    int: (_) => signedToken(NUM),
+    int_literal: (_) => /[+-]?[0-9](_?[0-9])*/,
     float: (_) =>
       choice(
         signedToken(NUM, ".", optional(NUM)),
