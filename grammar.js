@@ -7,9 +7,17 @@
 /// <reference types="tree-sitter-cli/dsl" />
 // @ts-check
 
-const HEX = /[0-9-A-Fa-f]/;
+const HEX = /[0-9A-Fa-f]/;
 const NUM = /[0-9](_?[0-9])*/;
 const HEX_NUM = /[0-9A-Fa-f](_?[0-9A-Fa-f])*/;
+
+const DECIMAL_FRACTION = /[+-]?[0-9](_?[0-9])*\.(?:[0-9](_?[0-9])*)?/;
+const DECIMAL_EXP =
+  /[+-]?[0-9](_?[0-9])*(?:\.(?:[0-9](_?[0-9])*)?)?[eE][+-]?[0-9](_?[0-9])*/;
+const HEX_FRACTION =
+  /[+-]?0[xX][0-9A-Fa-f](_?[0-9A-Fa-f])*\.(?:[0-9A-Fa-f](_?[0-9A-Fa-f])*)?/;
+const HEX_EXP =
+  /[+-]?0[xX][0-9A-Fa-f](_?[0-9A-Fa-f])*(?:\.(?:[0-9A-Fa-f](_?[0-9A-Fa-f])*)?)?[pP][+-]?[0-9](_?[0-9])*/;
 
 const ASCII = /[\x20-\x21\x23-\x5b\x5d-\x7e]/u; // '\20'..'\7e' except " or \
 
@@ -36,7 +44,7 @@ module.exports = grammar({
 
     // Core Grammar
 
-    prog: ($) => seq(sep($.def, ";"), optional($.actor)),
+    prog: ($) => seq(sepBy(";", $.def), optional($.actor)),
     def: ($) =>
       choice(
         seq("type", $.id, "=", $.datatype),
@@ -52,7 +60,7 @@ module.exports = grammar({
         optional(";"),
       ),
 
-    actortype: ($) => seq("{", sep($.methtype, ";"), "}"),
+    actortype: ($) => seq("{", sepBy(";", $.methtype), "}"),
     methtype: ($) =>
       seq(field("name", $.name), ":", field("type", choice($.functype, $.id))),
     functype: ($) =>
@@ -63,8 +71,8 @@ module.exports = grammar({
         repeat($.funcann),
       ),
     funcann: (_) => choice("oneway", "query", "composite_query"),
-    tuptype: ($) => seq("(", sep($.argtype, ","), ")"),
-    argtype: ($) => choice($.datatype, $._argtype_short),
+    tuptype: ($) => seq("(", sepBy(",", $.argtype), ")"),
+    argtype: ($) => choice($.datatype, $._shorthand_argtype),
 
     _record_fieldtype: ($) =>
       choice(
@@ -117,16 +125,16 @@ module.exports = grammar({
         seq(
           "record",
           "{",
-          sep(alias($._record_fieldtype, $.fieldtype), ";"),
+          sepBy(";", alias($._record_fieldtype, $.fieldtype)),
           "}",
         ),
         seq(
           "variant",
           "{",
-          sep(alias($._variant_fieldtype, $.fieldtype), ";"),
+          sepBy(";", alias($._variant_fieldtype, $.fieldtype)),
           "}",
         ),
-        $._constype_short,
+        $._shorthand_constype,
       ),
 
     reftype: ($) =>
@@ -136,8 +144,8 @@ module.exports = grammar({
 
     // Syntactic Shorthands
 
-    _argtype_short: ($) => seq(field("name", $.name), ":", $.datatype),
-    _constype_short: (_) => "blob",
+    _shorthand_argtype: ($) => seq(field("name", $.name), ":", $.datatype),
+    _shorthand_constype: (_) => "blob",
 
     // Comments
 
@@ -147,7 +155,7 @@ module.exports = grammar({
     // Interfaces
 
     desc: ($) =>
-      seq(sep($.def, ";"), optional(seq($.service, token.immediate(";")))),
+      seq(sepBy(";", $.def), optional(seq($.service, token.immediate(";")))),
     service: ($) =>
       seq(
         "service",
@@ -162,28 +170,21 @@ module.exports = grammar({
     val: ($) => choice($.primval, $.consval, $.refval, seq("(", $.annval, ")")),
     annval: ($) => choice($.val, seq($.val, ":", $.datatype)),
     primval: ($) =>
-      choice(
-        $.nat,
-        $.int_literal,
-        $.float,
-        $.text,
-        $.bool_literal,
-        $.null_literal,
-      ),
+      choice($.nat, $.int, $.float, $.text, $.bool_literal, $.null_literal),
     bool_literal: (_) => choice("true", "false"),
     null_literal: (_) => "null",
     consval: ($) =>
       choice(
         seq("opt", $.val),
-        seq("vec", "{", sep($.annval, ";"), "}"),
+        seq("vec", "{", sepBy(";", $.annval), "}"),
         seq(
           "record",
           "{",
-          sep(alias($._record_fieldval, $.fieldval), ";"),
+          sepBy(";", alias($._record_fieldval, $.fieldval)),
           "}",
         ),
         seq("variant", "{", alias($._variant_fieldval, $.fieldval), "}"),
-        $._consval_short,
+        $._shorthand_consval,
       ),
 
     _record_fieldval: ($) =>
@@ -206,34 +207,15 @@ module.exports = grammar({
         seq("func", $.text, ".", $.name), // canister URI and message name
         seq("principal", $.text), // principal URI
       ),
-    arg: ($) => seq("(", sep($.annval, ","), ")"),
+    arg: ($) => seq("(", sepBy(",", $.annval), ")"),
 
     letter: (_) => /[A-Za-z]/,
     digit: (_) => /[0-9]/,
     id: (_) => /[A-Za-z_][A-Za-z0-9_]*/,
 
-    nat: (_) => choice(NUM, token(seq("0x", HEX_NUM))),
-    int_literal: (_) => /[+-]?[0-9](_?[0-9])*/,
-    float: (_) =>
-      choice(
-        signedToken(NUM, ".", optional(NUM)),
-        signedToken(
-          NUM,
-          optional(seq(".", optional(NUM))),
-          choice("e", "E"),
-          optional(choice("+", "-")),
-          NUM,
-        ),
-        signedToken("0x", HEX_NUM, ".", optional(HEX_NUM)),
-        signedToken(
-          "0x",
-          HEX_NUM,
-          optional(seq(".", optional(HEX_NUM))),
-          choice("p", "P"),
-          optional(choice("+", "-")),
-          NUM,
-        ),
-      ),
+    nat: (_) => choice(NUM, /0[xX][0-9A-Fa-f](_?[0-9A-Fa-f])*/),
+    int: (_) => /[+-]?[0-9](_?[0-9])*/,
+    float: (_) => choice(DECIMAL_FRACTION, DECIMAL_EXP, HEX_FRACTION, HEX_EXP),
 
     text: ($) => seq('"', repeat($._char), '"'),
 
@@ -249,29 +231,30 @@ module.exports = grammar({
 
     // Syntactic Shorthands
 
-    _consval_short: ($) => seq("blob", $.text),
+    _shorthand_consval: ($) => seq("blob", $.text),
   },
 });
 
 /**
- * Creates a rule to match zero or more of the rules separated by the given separator
+ * Creates a rule to match one or more of the rules separated by the separator.
  *
+ * @param {RuleOrLiteral} sep - The separator to use.
  * @param {RuleOrLiteral} rule
- * @param {RuleOrLiteral} sep
  *
  * @returns {SeqRule}
  */
-function sep(rule, sep) {
-  return seq(repeat(seq(rule, token.immediate(sep))), optional(rule));
+function sepBy1(sep, rule) {
+  return seq(rule, repeat(seq(sep, rule)));
 }
 
 /**
- * Creates a rule to match a signed numeric token.
+ * Creates a rule to optionally match one or more of the rules separated by the separator.
  *
- * @param {...RuleOrLiteral} parts
+ * @param {RuleOrLiteral} sep - The separator to use.
+ * @param {RuleOrLiteral} rule
  *
- * @returns {TokenRule}
+ * @returns {ChoiceRule}
  */
-function signedToken(...parts) {
-  return token(seq(optional(choice("+", "-")), ...parts));
+function sepBy(sep, rule) {
+  return optional(sepBy1(sep, rule));
 }
