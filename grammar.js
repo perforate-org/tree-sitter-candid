@@ -244,7 +244,7 @@ module.exports = grammar({
  * @returns {SeqRule}
  */
 function sepBy1(sep, rule) {
-  return seq(rule, repeat(seq(sep, rule)));
+  return seq(repeat(seq(rule, sep)), optional(rule));
 }
 
 /**
