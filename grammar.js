@@ -44,7 +44,25 @@ module.exports = grammar({
 
     // Core Grammar
 
-    prog: ($) => seq(sepBy(";", $.def), optional($.actor)),
+    prog: ($) =>
+      choice(
+        seq(sepBy(";", $.def), optional($.actor)),
+        repeat1(
+          choice(
+            alias($._prog_methtype, $.methtype),
+            $.constype,
+            $.reftype,
+            $.nat,
+            seq($.nat, ":", $.numtype),
+            $.int,
+            seq($.int, ":", $.numtype),
+            $.float,
+            $.text,
+            $.bool_literal,
+            $.null_literal,
+          ),
+        ),
+      ),
     def: ($) =>
       choice(
         seq("type", $.id, "=", $.datatype),
@@ -63,6 +81,8 @@ module.exports = grammar({
     actortype: ($) => seq("{", sepBy(";", $.methtype), "}"),
     methtype: ($) =>
       seq(field("name", $.name), ":", field("type", choice($.functype, $.id))),
+    _prog_methtype: ($) =>
+      seq(field("name", $.name), ":", field("type", $.functype)),
     functype: ($) =>
       seq(
         field("type_parameters", $.tuptype),
@@ -214,7 +234,8 @@ module.exports = grammar({
     id: (_) => /[A-Za-z_][A-Za-z0-9_]*/,
 
     nat: (_) => choice(NUM, /0[xX][0-9A-Fa-f](_?[0-9A-Fa-f])*/),
-    int: (_) => /[+-]?[0-9](_?[0-9])*/,
+    int: (_) =>
+      choice(/[+-]?[0-9](_?[0-9])*/, /[+-]?0[xX][0-9A-Fa-f](_?[0-9A-Fa-f])*/),
     float: (_) => choice(DECIMAL_FRACTION, DECIMAL_EXP, HEX_FRACTION, HEX_EXP),
 
     text: ($) => seq('"', repeat($._char), '"'),

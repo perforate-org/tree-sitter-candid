@@ -81,6 +81,11 @@
     }
   },
   {
+    "type": "bool_literal",
+    "named": true,
+    "fields": {}
+  },
+  {
     "type": "comment",
     "named": true,
     "extra": true,
@@ -215,6 +220,11 @@
     }
   },
   {
+    "type": "float",
+    "named": true,
+    "fields": {}
+  },
+  {
     "type": "funcann",
     "named": true,
     "fields": {}
@@ -254,6 +264,11 @@
         }
       ]
     }
+  },
+  {
+    "type": "int",
+    "named": true,
+    "fields": {}
   },
   {
     "type": "methtype",
@@ -310,6 +325,11 @@
     "fields": {}
   },
   {
+    "type": "null_literal",
+    "named": true,
+    "fields": {}
+  },
+  {
     "type": "numtype",
     "named": true,
     "fields": {}
@@ -343,7 +363,47 @@
           "named": true
         },
         {
+          "type": "bool_literal",
+          "named": true
+        },
+        {
+          "type": "constype",
+          "named": true
+        },
+        {
           "type": "def",
+          "named": true
+        },
+        {
+          "type": "float",
+          "named": true
+        },
+        {
+          "type": "int",
+          "named": true
+        },
+        {
+          "type": "methtype",
+          "named": true
+        },
+        {
+          "type": "nat",
+          "named": true
+        },
+        {
+          "type": "null_literal",
+          "named": true
+        },
+        {
+          "type": "numtype",
+          "named": true
+        },
+        {
+          "type": "reftype",
+          "named": true
+        },
+        {
+          "type": "text",
           "named": true
         }
       ]
@@ -434,6 +494,10 @@
   },
   {
     "type": "empty",
+    "named": false
+  },
+  {
+    "type": "false",
     "named": false
   },
   {
@@ -530,6 +594,10 @@
   },
   {
     "type": "text",
+    "named": false
+  },
+  {
+    "type": "true",
     "named": false
   },
   {
